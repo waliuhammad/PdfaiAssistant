@@ -210,10 +210,15 @@ export default function CompressPdfPage() {
                     padding moved it — appearance-none is the only way to give
                     it room. pr-9 keeps the option text from running underneath. */}
                 <div className="relative">
+                  {/* Identified by the level, never by the target size. The size is
+                      the file's size times the level, rounded to a whole KB, so
+                      on a small file several levels land on the same number —
+                      and the first match won, meaning a person who chose Medium
+                      was quietly compressed at Extreme. */}
                   <select
-                    value={selectedOption?.targetKB || ""}
+                    value={selectedOption?.ratio ?? ""}
                     onChange={(e) => {
-                      const opt = options.find((o) => o.targetKB === Number(e.target.value));
+                      const opt = options.find((o) => o.ratio === Number(e.target.value));
                       if (opt) setSelectedOption(opt);
                       setDone(false);
                       setErrorMessage(null);
@@ -221,7 +226,7 @@ export default function CompressPdfPage() {
                     className="w-full max-w-full appearance-none bg-card border border-card rounded-xl pl-3 sm:pl-3.5 pr-9 sm:pr-10 py-2.5 sm:py-3 text-fg text-xs sm:text-sm focus:outline-none focus:border-slate-900 dark:border-white cursor-pointer"
                   >
                     {options.map((opt) => (
-                      <option key={opt.targetKB} value={opt.targetKB} className="bg-card text-fg">
+                      <option key={opt.ratio} value={opt.ratio} className="bg-card text-fg">
                         {opt.label}
                       </option>
                     ))}
