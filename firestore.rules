@@ -8,11 +8,32 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // A signed-in user owns everything under their own user document:
-    // the profile itself plus the documents and chats subcollections.
-    // The recursive wildcard covers the subcollections; nobody can reach
-    // another user's branch.
-    match /users/{userId}/{path=**} {
+    // The profile document. Its owner reads it and edits their own name, but
+    // the fields that decide what the account is entitled to — the plan, its
+    // expiry, team membership, stored preferences — are written only by the
+    // server. Before this, the rule below covered the profile too and a
+    // signed-in browser could set its own `plan` to "business".
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      // Registration: a free profile carrying the account's own address.
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.get('plan', 'free') == 'free'
+        && request.resource.data.get('email', null) == request.auth.token.get('email', null)
+        && !request.resource.data.keys().hasAny(['planExpiresAt', 'teamId', 'preferences']);
+
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && !request.resource.data.diff(resource.data).affectedKeys()
+             .hasAny(['plan', 'planExpiresAt', 'teamId', 'preferences', 'email']);
+
+      allow delete: if false;
+    }
+
+    // Everything under the profile — the documents and chats subcollections —
+    // belongs to its owner; nobody can reach another user's branch.
+    match /users/{userId}/{subcollection}/{path=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
