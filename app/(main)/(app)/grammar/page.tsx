@@ -304,7 +304,7 @@ if (!res.ok) {
 
                     {/* Output Panel */}
                     <div className="flex flex-col rounded-2xl bg-card border border-card p-4">
-                        <div className="flex items-center justify-between mb-2">
+                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 mb-2">
                             <span className="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
                                 <Sparkles size={13} className="text-[var(--primary)]" />
                                 Corrected Result

@@ -81,15 +81,18 @@ export async function checkAndCountUsage(
 
     // The user's plan decides which limit applies. During local testing,
     // the dev toggle can override what the server sees for the request.
-    const profileSnap = await db.collection("users").doc(uid).get();
-    const profile = (profileSnap.data() ?? null) as UserProfile | null;
-    // Includes a Business plan held through a team, not only the account's own.
-    const plan = devPlanOverride ?? (await resolveEffectivePlan(db, uid, profile)).plan;
-
+    // The profile and the limits are independent, so they are fetched
+    // together rather than one after the other.
     // The client's Remote Config supplies the number; monthly is the
     // reference cycle (their weekly/monthly/yearly values are identical
     // today, and the billing cycle isn't stored per-user yet).
-    const { limits, categoryLimits } = await getAppConfig();
+    const [profileSnap, { limits, categoryLimits }] = await Promise.all([
+        db.collection("users").doc(uid).get(),
+        getAppConfig(),
+    ]);
+    const profile = (profileSnap.data() ?? null) as UserProfile | null;
+    // Includes a Business plan held through a team, not only the account's own.
+    const plan = devPlanOverride ?? (await resolveEffectivePlan(db, uid, profile)).plan;
     const limit = limits.monthly[plan];
 
     const limited = category === "basic" ? null : category;
@@ -196,18 +199,21 @@ export async function peekUsage(
 
     const db = getFirestore(getAdminApp());
 
-    const profileSnap = await db.collection("users").doc(uid).get();
+    // Three independent reads, fetched together.
+    const [profileSnap, { limits, categoryLimits }, snap] = await Promise.all([
+        db.collection("users").doc(uid).get(),
+        getAppConfig(),
+        db.collection("usage").doc(`${uid}_${todayKey()}`).get(),
+    ]);
     const plan =
         devPlanOverride ??
         (await resolveEffectivePlan(db, uid, (profileSnap.data() ?? null) as UserProfile | null)).plan;
 
-    const { limits, categoryLimits } = await getAppConfig();
     const limit = limits.monthly[plan];
 
     const limited = category === "basic" ? null : category;
     const categoryLimit = limited ? categoryLimits[plan][limited] : null;
 
-    const snap = await db.collection("usage").doc(`${uid}_${todayKey()}`).get();
     const data = snap.data() ?? {};
     const used = (data.count as number | undefined) ?? 0;
     const categoryUsed = limited ? ((data[fieldFor(limited)] as number | undefined) ?? 0) : null;
@@ -256,13 +262,15 @@ export async function peekUsageBreakdown(
 
     const db = getFirestore(getAdminApp());
 
-    const profileSnap = await db.collection("users").doc(uid).get();
+    // Three independent reads, fetched together.
+    const [profileSnap, { limits, categoryLimits }, snap] = await Promise.all([
+        db.collection("users").doc(uid).get(),
+        getAppConfig(),
+        db.collection("usage").doc(`${uid}_${todayKey()}`).get(),
+    ]);
     const plan =
         devPlanOverride ??
         (await resolveEffectivePlan(db, uid, (profileSnap.data() ?? null) as UserProfile | null)).plan;
-
-    const { limits, categoryLimits } = await getAppConfig();
-    const snap = await db.collection("usage").doc(`${uid}_${todayKey()}`).get();
     const data = snap.data() ?? {};
 
     return {

@@ -7,6 +7,7 @@ import {
     SESSION_MAX_AGE_MS,
 } from "@/lib/firebase/admin";
 import { SESSION_HINT_COOKIE } from "@/lib/session-hint";
+import { forgetSession } from "@/lib/session-verify";
 import { rateLimit, SESSION_LIMIT } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -101,7 +102,10 @@ export async function POST(req: NextRequest) {
 }
 
 /** Sign out. Clearing the cookie is all the server needs to do. */
-export async function DELETE() {
+export async function DELETE(req: NextRequest) {
+    const current = req.cookies.get(SESSION_COOKIE)?.value;
+    if (current) forgetSession(current);
+
     const response = NextResponse.json({ ok: true });
     response.cookies.set({
         name: SESSION_COOKIE,

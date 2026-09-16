@@ -204,7 +204,7 @@ export default function PdfTranslatorPage() {
 
           {/* Output Panel */}
           <div className="flex flex-col rounded-3xl border border-[#222430]/15 dark:border-white/20 shadow-md bg-[var(--background-secondary)] text-[#222430] dark:text-white p-5 transition-colors">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 mb-2">
               <span className="text-xs font-bold uppercase tracking-wider text-[#222430]/70 dark:text-white flex items-center gap-1.5">
                 <Sparkles size={13} />
                 Translated Result

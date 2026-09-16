@@ -9,6 +9,7 @@ import { dissolveTeam, removeMember, resolveEffectivePlan, teamRef, type TeamDoc
 import { readNotificationPrefs, sendEmail } from "@/lib/email";
 import { cancelSubscription, subscriptionFor } from "@/lib/billing/lemonsqueezy";
 import { rateLimit } from "@/lib/rate-limit";
+import { forgetSession } from "@/lib/session-verify";
 
 /**
  * The signed-in account, as the server sees it.
@@ -225,6 +226,9 @@ export async function DELETE(req: NextRequest) {
             ].join("\n\n"),
         });
     }
+
+    const current = req.cookies.get(SESSION_COOKIE)?.value;
+    if (current) forgetSession(current);
 
     const response = NextResponse.json({ success: true });
     for (const name of [SESSION_COOKIE, SESSION_HINT_COOKIE]) {

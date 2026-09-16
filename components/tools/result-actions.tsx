@@ -54,14 +54,16 @@ export function ResultActions({
         "py-2 px-3 rounded-xl border border-[#222430]/10 dark:border-white/20 " +
         "bg-[var(--background-secondary)] text-[#222430] dark:text-white " +
         "hover:bg-[#222430] hover:text-white dark:hover:bg-white dark:hover:text-[#222430] " +
-        "transition-all shadow-sm flex items-center gap-1.5 text-xs font-bold";
+        "transition-all shadow-sm flex items-center gap-1.5 text-xs font-bold whitespace-nowrap";
 
     const menuItem =
         "w-full text-left px-3.5 py-2.5 text-xs font-semibold flex items-center gap-2 " +
         "transition-colors hover:bg-[#222430]/5 dark:hover:bg-white/10";
 
+    // Wraps rather than overflowing: on a narrow phone the title beside these
+    // left too little room, and Download was pushed out past the card's edge.
     return (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={handleCopy} className={button}>
                 <Copy size={14} />
                 {copied ? "Copied" : "Copy"}

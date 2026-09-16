@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
     adminConfigProblem,
-    getAdminAuth,
     isAdminConfigured,
     SESSION_COOKIE,
 } from "@/lib/firebase/admin";
+import { verifySession } from "@/lib/session-verify";
 
 /**
  * Guards the signed-in area on the server.
@@ -49,16 +49,14 @@ export async function proxy(request: NextRequest) {
     const session = request.cookies.get(SESSION_COOKIE)?.value;
     if (!session) return redirectToLogin(request);
 
-    try {
-        // checkRevoked, so signing out everywhere actually takes effect.
-        await getAdminAuth().verifySessionCookie(session, true);
-        return NextResponse.next();
-    } catch {
-        // Expired, revoked or forged. Clear it so the browser stops sending it.
-        const response = redirectToLogin(request);
-        response.cookies.set({ name: SESSION_COOKIE, value: "", path: "/", maxAge: 0 });
-        return response;
-    }
+    // Revocation is checked too (cached for a minute), so signing out
+    // everywhere actually takes effect.
+    if (await verifySession(session)) return NextResponse.next();
+
+    // Expired, revoked or forged. Clear it so the browser stops sending it.
+    const response = redirectToLogin(request);
+    response.cookies.set({ name: SESSION_COOKIE, value: "", path: "/", maxAge: 0 });
+    return response;
 }
 
 function redirectToLogin(request: NextRequest) {

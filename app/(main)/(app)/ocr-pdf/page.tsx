@@ -265,11 +265,11 @@ export default function OcrPdfPage() {
           </div>
 
           {extractedText && (
-            <div className="mt-6 p-6 rounded-3xl border border-[#222430]/15 dark:border-white/20 shadow-md bg-[var(--background-secondary)] text-[#222430] dark:text-white transition-colors">
-              <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#222430]/10 dark:border-white/20">
+            <div className="mt-6 p-4 sm:p-6 rounded-3xl border border-[#222430]/15 dark:border-white/20 shadow-md bg-[var(--background-secondary)] text-[#222430] dark:text-white transition-colors">
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 pb-3 mb-3 border-b border-[#222430]/10 dark:border-white/20">
                 <div className="flex items-center gap-2">
                   <ScanText size={18} />
-                  <span className="text-sm font-extrabold">Extracted Text</span>
+                  <span className="text-sm font-extrabold whitespace-nowrap">Extracted Text</span>
                 </div>
 
                 <ResultActions

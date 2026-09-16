@@ -1,6 +1,7 @@
 import "server-only";
 import type { NextRequest } from "next/server";
-import { getAdminAuth, isAdminConfigured, SESSION_COOKIE } from "@/lib/firebase/admin";
+import { isAdminConfigured, SESSION_COOKIE } from "@/lib/firebase/admin";
+import { verifySession } from "@/lib/session-verify";
 
 /**
  * Who is making this request?
@@ -24,12 +25,7 @@ export async function getSessionUid(): Promise<string | null> {
     const session = (await cookies()).get(SESSION_COOKIE)?.value;
     if (!session) return null;
 
-    try {
-        const decoded = await getAdminAuth().verifySessionCookie(session, true);
-        return decoded.uid;
-    } catch {
-        return null;
-    }
+    return verifySession(session);
 }
 
 export async function getRequestUid(req: NextRequest): Promise<string | null> {
@@ -38,11 +34,6 @@ export async function getRequestUid(req: NextRequest): Promise<string | null> {
     const session = req.cookies.get(SESSION_COOKIE)?.value;
     if (!session) return null;
 
-    try {
-        const decoded = await getAdminAuth().verifySessionCookie(session, true);
-        return decoded.uid;
-    } catch {
-        // Expired, revoked or invalid — treat exactly like signed out.
-        return null;
-    }
+    // Expired, revoked or invalid — null, treated exactly like signed out.
+    return verifySession(session);
 }

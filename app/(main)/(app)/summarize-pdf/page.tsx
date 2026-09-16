@@ -60,12 +60,20 @@ export default function SummarizePdfPage() {
 
       const aiSummary = data.result.summary;
 
-      const resultSummary =
+      const lines: string[] =
         Array.isArray(aiSummary)
-          ? aiSummary
+          ? aiSummary.map(String)
           : typeof aiSummary === "string"
-          ? aiSummary.split("\n").filter(Boolean)
-          : ["No summary returned."];
+          ? aiSummary.split("\n")
+          : [];
+
+      // The model writes its own bullets ("* ", "• ", "- ", "1. "), and the
+      // list adds one too, which showed as "• * The document…".
+      const cleaned = lines
+        .map((line) => line.replace(/^\s*(?:[*•\-–]|\d+[.)])\s+/, "").trim())
+        .filter(Boolean);
+
+      const resultSummary = cleaned.length ? cleaned : ["No summary returned."];
 
       setSummary(resultSummary);
 
@@ -223,11 +231,11 @@ export default function SummarizePdfPage() {
           </div>
 
           {summary && (
-            <div className="mt-6 p-6 rounded-3xl border border-[#222430]/15 dark:border-white/20 shadow-md bg-[var(--background-secondary)] text-[#222430] dark:text-white transition-colors">
-              <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#222430]/10 dark:border-white/20">
+            <div className="mt-6 p-4 sm:p-6 rounded-3xl border border-[#222430]/15 dark:border-white/20 shadow-md bg-[var(--background-secondary)] text-[#222430] dark:text-white transition-colors">
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 pb-3 mb-3 border-b border-[#222430]/10 dark:border-white/20">
                 <div className="flex items-center gap-2">
                   <Sparkles size={18} />
-                  <span className="text-sm font-extrabold">AI Summary</span>
+                  <span className="text-sm font-extrabold whitespace-nowrap">AI Summary</span>
                 </div>
 
                 <ResultActions
