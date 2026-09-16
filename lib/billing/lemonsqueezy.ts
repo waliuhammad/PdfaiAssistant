@@ -321,22 +321,35 @@ export async function grantPlan(args: {
  *
  * Stored so the account can be told. A subscriber whose card is failing has a
  * few days to fix it and no way of knowing unless something says so.
+ *
+ * Returns true for the first failure of a run. Each retry sends the event
+ * again, and the customer needs one email about it, not one per retry.
  */
 export async function recordPaymentFailure(
     uid: string,
     subscriptionId: string | null
-): Promise<void> {
+): Promise<boolean> {
     const store = database()
+    const ref = store.collection("subscriptions").doc(uid)
 
-    await store.collection("subscriptions").doc(uid).set(
-        {
-            provider: "lemonsqueezy",
-            ...(subscriptionId ? { subscriptionId } : {}),
-            paymentFailedAt: Date.now(),
-            updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-    )
+    return store.runTransaction(async (tx) => {
+        const snap = await tx.get(ref)
+        const alreadyFailing = typeof snap.data()?.paymentFailedAt === "number"
+
+        tx.set(
+            ref,
+            {
+                provider: "lemonsqueezy",
+                ...(subscriptionId ? { subscriptionId } : {}),
+                // The first failure is kept: it is when the problem started.
+                ...(alreadyFailing ? {} : { paymentFailedAt: Date.now() }),
+                updatedAt: FieldValue.serverTimestamp(),
+            },
+            { merge: true }
+        )
+
+        return !alreadyFailing
+    })
 }
 
 /**
@@ -440,4 +453,15 @@ export async function customerPortalUrl(uid: string): Promise<string | null> {
     const urls = attrs?.urls as { customer_portal?: string } | undefined
 
     return urls?.customer_portal ?? null
+}
+
+/**
+ * Cancels a subscription so it never renews. Lemon Squeezy keeps it active to
+ * the end of the paid period; used when the account behind it is deleted,
+ * so nobody is charged for an account that no longer exists.
+ */
+export async function cancelSubscription(subscriptionId: string): Promise<void> {
+    await lemonSqueezyFetch(`/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+        method: "DELETE",
+    })
 }

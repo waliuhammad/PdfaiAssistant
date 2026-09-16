@@ -1,9 +1,9 @@
 "use client";
 
-import { User, Palette, Bell, Lock, Globe, CreditCard } from "lucide-react";
+import { User, Palette, Bell, Lock, Globe, CreditCard, Users } from "lucide-react";
 import { useT } from "@/components/locale-provider";
 
-export type SettingsTab = "profile" | "theme" | "notifications" | "password" | "language" | "billing";
+export type SettingsTab = "profile" | "theme" | "notifications" | "password" | "language" | "billing" | "team";
 
 const tabs = [
     { id: "profile", key: "settings.profile", icon: User },
@@ -12,13 +12,14 @@ const tabs = [
     { id: "password", key: "settings.password", icon: Lock },
     { id: "language", key: "settings.language", icon: Globe },
     { id: "billing", key: "settings.billing", icon: CreditCard },
+    { id: "team", key: "settings.team", icon: Users },
 ] as const;
 
 export function SettingsTabs({ active, onChange }: { active: SettingsTab; onChange: (tab: SettingsTab) => void }) {
     const { t } = useT();
 
     return (
-        // Six full-width buttons stacked on a phone pushed the actual settings
+        // Seven full-width buttons stacked on a phone pushed the actual settings
         // ~250px down the page. They scroll in one row there — the same pattern
         // as the tools category filter — and become the vertical sidebar at md.
         <div className="w-full md:w-56 shrink-0 flex md:flex-col gap-1 overflow-x-auto no-scrollbar -mx-4 px-4 md:mx-0 md:px-0 md:overflow-visible">

@@ -9,6 +9,8 @@ import {
     verifyWebhookSignature,
     recordPaymentFailure,
 } from "@/lib/billing/lemonsqueezy"
+import { notifyUser } from "@/lib/email"
+import { getSiteUrl } from "@/lib/site-url"
 
 // crypto and firebase-admin both need Node, not Edge.
 export const runtime = "nodejs"
@@ -109,6 +111,22 @@ function asId(value: unknown): string | null {
  * either of them up in `subscriptions` could only ever miss.
  */
 async function resolveUid(payload: Payload, subscriptionId: string | null): Promise<string | null> {
+    const uid = await findUid(payload, subscriptionId)
+    if (!uid) return null
+
+    // A deleted account keeps receiving events for a while — the cancellation
+    // it triggered, the end of the paid period. Applying them would bring the
+    // user document back as an orphan holding a plan.
+    const deleted = await getFirestore(getAdminApp()).collection("deletedAccounts").doc(uid).get()
+    if (deleted.exists) {
+        console.log(`[lemonsqueezy] ignoring an event for deleted account ${uid}`)
+        return null
+    }
+
+    return uid
+}
+
+async function findUid(payload: Payload, subscriptionId: string | null): Promise<string | null> {
     const fromCustom = payload.meta?.custom_data?.user_id
     if (typeof fromCustom === "string" && fromCustom) return fromCustom
 
@@ -350,7 +368,8 @@ async function handleSubscription(event: string, payload: Payload): Promise<void
     }
 
     if (INFORMATIONAL.has(event)) {
-        await recordPaymentFailure(uid, subscriptionId)
+        const firstFailure = await recordPaymentFailure(uid, subscriptionId)
+        if (firstFailure) await sendPaymentFailedNotice(uid)
         console.log(
             `[lemonsqueezy] ${event} for ${uid}: noted, plan left alone while ` +
             `Lemon Squeezy retries`
@@ -451,4 +470,23 @@ async function handleSubscription(event: string, payload: Payload): Promise<void
         `[lemonsqueezy] ${event}: ${uid} on ${mapped.planId}/${mapped.cycle} until ` +
         new Date(periodEnd).toISOString()
     )
+}
+
+/**
+ * The one email a failing renewal sends. Respects the account's "Email
+ * notifications" switch, like every other account notice.
+ */
+async function sendPaymentFailedNotice(uid: string): Promise<void> {
+    const settings = `${getSiteUrl()}/settings`
+    await notifyUser(uid, "account", {
+        subject: "Your PDF AI Assistant payment didn't go through",
+        text: [
+            "We couldn't take the latest payment for your PDF AI Assistant subscription.",
+            "Your plan is still active while the payment is retried over the next few days. " +
+                "To keep it, update your card from Settings → Subscription & Billing → Manage subscription:",
+            settings,
+            "If the retries don't succeed, your account moves to the Free plan. " +
+                "Nothing you've created is deleted.",
+        ].join("\n\n"),
+    }).catch((err) => console.error("[lemonsqueezy] could not send the payment notice", err))
 }

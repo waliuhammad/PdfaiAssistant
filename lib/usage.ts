@@ -1,7 +1,8 @@
 import "server-only";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getAdminApp, isAdminConfigured } from "@/lib/firebase/admin";
-import { resolvePlan, type UserProfile } from "@/lib/firebase/users";
+import type { UserProfile } from "@/lib/firebase/users";
+import { resolveEffectivePlan } from "@/lib/teams";
 import { getAppConfig, LIMITED_CATEGORIES, type LimitedCategory } from "@/lib/remote-config";
 import type { PlanId } from "@/lib/plans";
 
@@ -82,7 +83,8 @@ export async function checkAndCountUsage(
     // the dev toggle can override what the server sees for the request.
     const profileSnap = await db.collection("users").doc(uid).get();
     const profile = (profileSnap.data() ?? null) as UserProfile | null;
-    const plan = devPlanOverride ?? resolvePlan(profile);
+    // Includes a Business plan held through a team, not only the account's own.
+    const plan = devPlanOverride ?? (await resolveEffectivePlan(db, uid, profile)).plan;
 
     // The client's Remote Config supplies the number; monthly is the
     // reference cycle (their weekly/monthly/yearly values are identical
@@ -195,7 +197,9 @@ export async function peekUsage(
     const db = getFirestore(getAdminApp());
 
     const profileSnap = await db.collection("users").doc(uid).get();
-    const plan = devPlanOverride ?? resolvePlan((profileSnap.data() ?? null) as UserProfile | null);
+    const plan =
+        devPlanOverride ??
+        (await resolveEffectivePlan(db, uid, (profileSnap.data() ?? null) as UserProfile | null)).plan;
 
     const { limits, categoryLimits } = await getAppConfig();
     const limit = limits.monthly[plan];
@@ -253,7 +257,9 @@ export async function peekUsageBreakdown(
     const db = getFirestore(getAdminApp());
 
     const profileSnap = await db.collection("users").doc(uid).get();
-    const plan = devPlanOverride ?? resolvePlan((profileSnap.data() ?? null) as UserProfile | null);
+    const plan =
+        devPlanOverride ??
+        (await resolveEffectivePlan(db, uid, (profileSnap.data() ?? null) as UserProfile | null)).plan;
 
     const { limits, categoryLimits } = await getAppConfig();
     const snap = await db.collection("usage").doc(`${uid}_${todayKey()}`).get();

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { destinationAfterSignIn } from "@/lib/next-destination";
 import { useState } from "react";
 import { Mail, Lock, User, Eye, EyeOff, Phone } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
@@ -30,7 +31,7 @@ export default function RegisterPage() {
         setLoading(true);
         try {
             await registerWithEmail({ fullName: name, email, password, phoneDialCode: dialCode, phoneNumber });
-            router.push("/dashboard");
+            router.push(destinationAfterSignIn());
         } catch (err) {
             // Firebase's own message used to reach the screen, which showed the
             // raw auth/... code and read like a crash.
@@ -49,7 +50,7 @@ export default function RegisterPage() {
         setLoading(true);
         try {
             await signInWithSocial(provider);
-            router.push("/dashboard");
+            router.push(destinationAfterSignIn());
         } catch (err) {
             // A closed popup is the user changing their mind, not a failure.
             setError(isUserCancelled(err) ? null : signUpErrorMessage(err));

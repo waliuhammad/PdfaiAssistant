@@ -9,27 +9,7 @@ import { signInWithEmail, signInWithSocial, type SocialProviderId } from "@/lib/
 import { SocialAuth } from "@/components/auth/social-auth";
 import { TermsNotice } from "@/components/auth/terms-agreement";
 import { signInErrorMessage, isUserCancelled } from "@/lib/auth-errors";
-
-/**
- * Where to go after signing in.
- *
- * proxy.ts appends ?next= when it turns someone away, so they land where they
- * were headed rather than always on the dashboard.
- *
- * Only a path on this site is accepted. Taking the parameter at face value
- * would let a link like /login?next=https://example.com bounce a freshly
- * signed-in visitor straight off the site — the standard open redirect. The
- * leading-slash-but-not-double-slash test rejects both absolute URLs and
- * protocol-relative ones.
- */
-function destinationAfterLogin(): string {
-    if (typeof window === "undefined") return "/dashboard";
-
-    const next = new URLSearchParams(window.location.search).get("next");
-    if (next && /^\/(?!\/)/.test(next)) return next;
-
-    return "/dashboard";
-}
+import { destinationAfterSignIn } from "@/lib/next-destination";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -45,7 +25,7 @@ export default function LoginPage() {
         setLoading(true);
         try {
             await signInWithEmail(email, password);
-            router.push(destinationAfterLogin());
+            router.push(destinationAfterSignIn());
         } catch (err) {
             setError(signInErrorMessage(err));
         } finally {
@@ -58,7 +38,7 @@ export default function LoginPage() {
         setLoading(true);
         try {
             await signInWithSocial(provider);
-            router.push(destinationAfterLogin());
+            router.push(destinationAfterSignIn());
         } catch (err) {
             // A closed popup is the user changing their mind, not a failure.
             setError(isUserCancelled(err) ? null : signInErrorMessage(err));

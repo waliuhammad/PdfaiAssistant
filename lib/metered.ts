@@ -9,6 +9,7 @@ import {
     type UsageResult,
 } from "@/lib/usage";
 import type { PlanId } from "@/lib/plans";
+import { withProcessingSlot } from "@/lib/priority";
 
 /**
  * What metered() knows by the time the handler runs, and the handler would
@@ -142,7 +143,9 @@ export function metered(
             // works while you are testing with the toggle on and silently
             // allows everything in production. checkAndCountUsage has already
             // applied the override, so this is the resolved plan either way.
-            response = await handler(req, { plan: usage.plan });
+            // Queued by plan when the server is busy — the "priority
+            // processing" paid plans are sold with.
+            response = await withProcessingSlot(usage.plan, () => handler(req, { plan: usage.plan }));
         } catch (err) {
             await refundOperation(uid, category);
             throw err;

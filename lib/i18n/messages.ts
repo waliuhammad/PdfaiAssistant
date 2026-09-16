@@ -40,6 +40,7 @@ const en = {
     "settings.password": "Password",
     "settings.language": "Language",
     "settings.billing": "Subscription & Billing",
+    "settings.team": "Team",
     "settings.interfaceLanguage": "Interface language",
     "settings.searchLanguages": "Search languages...",
 
@@ -88,6 +89,7 @@ const es: Partial<typeof en> = {
     "settings.password": "Contraseña",
     "settings.language": "Idioma",
     "settings.billing": "Suscripción y facturación",
+    "settings.team": "Equipo",
     "settings.interfaceLanguage": "Idioma de la interfaz",
     "settings.searchLanguages": "Buscar idiomas...",
 
@@ -136,6 +138,7 @@ const fr: Partial<typeof en> = {
     "settings.password": "Mot de passe",
     "settings.language": "Langue",
     "settings.billing": "Abonnement et facturation",
+    "settings.team": "Équipe",
     "settings.interfaceLanguage": "Langue de l'interface",
     "settings.searchLanguages": "Rechercher une langue...",
 
@@ -184,6 +187,7 @@ const de: Partial<typeof en> = {
     "settings.password": "Passwort",
     "settings.language": "Sprache",
     "settings.billing": "Abo und Abrechnung",
+    "settings.team": "Team",
     "settings.interfaceLanguage": "Sprache der Oberfläche",
     "settings.searchLanguages": "Sprachen suchen...",
 
@@ -232,6 +236,7 @@ const pt: Partial<typeof en> = {
     "settings.password": "Senha",
     "settings.language": "Idioma",
     "settings.billing": "Assinatura e faturamento",
+    "settings.team": "Equipe",
     "settings.interfaceLanguage": "Idioma da interface",
     "settings.searchLanguages": "Pesquisar idiomas...",
 
@@ -280,6 +285,7 @@ const ar: Partial<typeof en> = {
     "settings.password": "كلمة المرور",
     "settings.language": "اللغة",
     "settings.billing": "الاشتراك والفوترة",
+    "settings.team": "الفريق",
     "settings.interfaceLanguage": "لغة الواجهة",
     "settings.searchLanguages": "ابحث عن لغة...",
 
@@ -328,6 +334,7 @@ const ur: Partial<typeof en> = {
     "settings.password": "پاس ورڈ",
     "settings.language": "زبان",
     "settings.billing": "سبسکرپشن اور بلنگ",
+    "settings.team": "ٹیم",
     "settings.interfaceLanguage": "انٹرفیس کی زبان",
     "settings.searchLanguages": "زبانیں تلاش کریں...",
 
@@ -376,6 +383,7 @@ const zh: Partial<typeof en> = {
     "settings.password": "密码",
     "settings.language": "语言",
     "settings.billing": "订阅与账单",
+    "settings.team": "团队",
     "settings.interfaceLanguage": "界面语言",
     "settings.searchLanguages": "搜索语言...",
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
 import { SettingsTabs, SettingsTab } from "@/components/settings/settings-tabs";
 import { Sun, Moon, Monitor, Check, AlertCircle, Loader2, ChevronDown, Search } from "lucide-react";
@@ -10,6 +11,9 @@ import { SUPPORTED_LANGUAGES } from "@/lib/i18n/messages";
 import { updateUserProfile } from "@/lib/firebase/users";
 import { changePassword, hasPasswordProvider } from "@/lib/firebase/auth";
 import { BillingTab } from "@/components/settings/billing-tab";
+import { TeamTab } from "@/components/settings/team-tab";
+import { DeleteAccount } from "@/components/settings/delete-account";
+import { useAccount } from "@/hooks/useAccount";
 
 type Status =
     | { kind: "idle" }
@@ -26,6 +30,8 @@ interface Preferences {
     language: string;
     notifications: Record<NotificationKey, boolean>;
 }
+
+const TAB_IDS: SettingsTab[] = ["profile", "theme", "notifications", "password", "language", "billing", "team"];
 
 const DEFAULT_PREFS: Preferences = {
     language: "en",
@@ -76,7 +82,13 @@ export default function SettingsPage() {
     const { user, profile } = useAuth();
     const { theme, setTheme } = useTheme();
     const { t } = useT();
-    const [tab, setTab] = useState<SettingsTab>("profile");
+    // ?tab= lets other pages link straight to a panel (the payment banner
+    // links to billing).
+    const searchParams = useSearchParams();
+    const [tab, setTab] = useState<SettingsTab>(() => {
+        const requested = searchParams.get("tab");
+        return TAB_IDS.includes(requested as SettingsTab) ? (requested as SettingsTab) : "profile";
+    });
 
     // Profile. The draft stays null until the field is edited, so a late-arriving
     // auth profile fills the input without an effect syncing state to props.
@@ -90,8 +102,14 @@ export default function SettingsPage() {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [passwordStatus, setPasswordStatus] = useState<Status>({ kind: "idle" });
 
-    // Preferences persist locally until there is a backend to store them against.
+    // The language is also kept in this browser, where the locale provider
+    // reads it. The email switches live on the account: the server decides what
+    // is sent, so its copy is the one shown once it has loaded.
     const [prefs, setPrefs] = useState<Preferences>(loadPreferences);
+    const { account } = useAccount();
+    const [notificationDraft, setNotificationDraft] = useState<Preferences["notifications"] | null>(null);
+    const [notificationStatus, setNotificationStatus] = useState<Status>({ kind: "idle" });
+    const notifications = notificationDraft ?? account?.preferences.notifications ?? null;
 
     // Language Dropdown State
     const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
@@ -109,7 +127,34 @@ export default function SettingsPage() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    const saveToAccount = async (body: Record<string, unknown>): Promise<boolean> => {
+        try {
+            const res = await fetch("/api/account/preferences", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            });
+            return res.ok;
+        } catch {
+            return false;
+        }
+    };
+
+    const saveNotifications = async (next: Preferences["notifications"]) => {
+        const previous = notifications;
+        setNotificationDraft(next);
+        setNotificationStatus({ kind: "saving" });
+        const ok = await saveToAccount({ notifications: next });
+        if (ok) {
+            setNotificationStatus({ kind: "saved" });
+        } else {
+            setNotificationDraft(previous);
+            setNotificationStatus({ kind: "error", message: "Couldn't save that change. Please try again." });
+        }
+    };
+
     const savePreferences = (next: Preferences) => {
+        if (next.language !== prefs.language) void saveToAccount({ language: next.language });
         setPrefs(next);
         try {
             localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(next));
@@ -246,6 +291,8 @@ export default function SettingsPage() {
                                 </button>
                                 <StatusMessage status={profileStatus} savedLabel="Profile updated" />
                             </div>
+
+                            <DeleteAccount />
                         </div>
                     )}
 
@@ -284,7 +331,7 @@ export default function SettingsPage() {
                                 { key: "product" as const, label: "Product updates", desc: "New features and improvements" },
                                 { key: "marketing" as const, label: "Marketing emails", desc: "Tips, offers, and promotions" },
                             ].map((item) => {
-                                const enabled = prefs.notifications[item.key];
+                                const enabled = notifications?.[item.key] ?? false;
 
                                 return (
                                     <div key={item.key} className="flex items-center justify-between py-2">
@@ -296,11 +343,10 @@ export default function SettingsPage() {
                                             role="switch"
                                             aria-checked={enabled}
                                             aria-label={item.label}
+                                            disabled={!notifications || notificationStatus.kind === "saving"}
                                             onClick={() =>
-                                                savePreferences({
-                                                    ...prefs,
-                                                    notifications: { ...prefs.notifications, [item.key]: !enabled },
-                                                })
+                                                notifications &&
+                                                saveNotifications({ ...notifications, [item.key]: !enabled })
                                             }
                                             className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${enabled ? "bg-[var(--primary)]" : "bg-[var(--card-border)]"
                                                 }`}
@@ -313,8 +359,15 @@ export default function SettingsPage() {
                                     </div>
                                 );
                             })}
-                            <p className="text-xs text-muted pt-2">
-                                Saved on this device until notification delivery is connected.
+                            <div className="pt-2 min-h-6">
+                                {!account ? (
+                                    <p className="text-xs text-muted">Loading your settings…</p>
+                                ) : (
+                                    <StatusMessage status={notificationStatus} savedLabel="Saved to your account" />
+                                )}
+                            </div>
+                            <p className="text-xs text-muted">
+                                Messages you ask for — support replies, team invites, account deletion — are always sent.
                             </p>
                         </div>
                     )}
@@ -470,6 +523,7 @@ export default function SettingsPage() {
                     )}
 
                     {tab === "billing" && <BillingTab />}
+                    {tab === "team" && <TeamTab />}
                 </div>
             </div>
         </div>

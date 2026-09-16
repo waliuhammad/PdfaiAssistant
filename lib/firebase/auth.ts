@@ -167,3 +167,26 @@ export async function changePassword(currentPassword: string, newPassword: strin
     await reauthenticateWithCredential(user, credential);
     await updatePassword(user, newPassword);
 }
+import { reauthenticateWithPopup } from "firebase/auth";
+
+/**
+ * Signs the current user in again and returns a fresh ID token, for actions
+ * the server only accepts from a sign-in made moments ago (deleting the
+ * account). Password accounts confirm with their password; Google and GitHub
+ * accounts through the provider's popup.
+ */
+export async function confirmIdentity(password?: string): Promise<string> {
+    const user = getFirebaseAuth().currentUser;
+    if (!user) throw new Error("You need to be signed in.");
+
+    if (hasPasswordProvider(user)) {
+        if (!user.email || !password) throw new Error("Enter your password to confirm.");
+        await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password));
+    } else {
+        const providerId = user.providerData[0]?.providerId;
+        const id: SocialProviderId = providerId === "github.com" ? "github" : "google";
+        await reauthenticateWithPopup(user, buildProvider(id));
+    }
+
+    return user.getIdToken(true);
+}

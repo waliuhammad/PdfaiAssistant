@@ -64,8 +64,11 @@ export async function proxy(request: NextRequest) {
 function redirectToLogin(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    // So the visitor lands back where they were headed after signing in.
-    url.searchParams.set("next", request.nextUrl.pathname);
+    // So the visitor lands back where they were headed after signing in —
+    // query included, which is what carries the chosen plan into /checkout.
+    // The original query moves into `next` rather than riding along on /login.
+    url.search = "";
+    url.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);
     return NextResponse.redirect(url);
 }
 

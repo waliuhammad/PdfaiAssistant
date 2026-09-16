@@ -4,6 +4,10 @@ import { useT } from "@/components/locale-provider";
 import Link from "next/link";
 import { Wrench, Cpu } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useAccount } from "@/hooks/useAccount";
+import { usePlanUsage } from "@/hooks/usePlanUsage";
+import { getPlan, type PlanId } from "@/lib/plans";
+import { PaymentFailedBanner } from "@/components/account/payment-failed-banner";
 
 /**
  * The dashboard, without a document library.
@@ -30,19 +34,30 @@ export default function DashboardPage() {
 
     const displayName =
         profile?.fullName || user?.displayName || user?.email?.split("@")[0] || "there";
-    const planLabel = profile?.plan === "paid" ? t("dashboard.paidPlan") : t("dashboard.freePlan");
+    // The plan the server resolved, which includes one held through a team.
+    // Reading profile.plan here labelled every Pro and Business account "Free".
+    const { usage } = usePlanUsage();
+    const { account } = useAccount();
+    const plan = (usage?.plan ?? account?.plan ?? null) as PlanId | null;
+    const planLabel =
+        plan === null ? null : plan === "free" ? t("dashboard.freePlan") : `${getPlan(plan).name} Plan`;
 
     return (
         <div>
+            <PaymentFailedBanner failedAt={account?.paymentFailedAt} />
+
             <div className="mb-6 animate-tool-in">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                     <div>
                         <h1 className="text-2xl font-bold text-fg">{t("dashboard.welcome")}, {displayName} 👋</h1>
                         <p className="text-muted text-sm mt-1">{t("dashboard.subtitle")}</p>
                     </div>
-                    <span className="text-xs font-medium px-3 py-1.5 rounded-full bg-red-50 text-[var(--primary)] shrink-0">
-                        {planLabel}
-                    </span>
+                    {planLabel && (
+                        <span className="text-xs font-medium px-3 py-1.5 rounded-full bg-red-50 text-[var(--primary)] shrink-0">
+                            {planLabel}
+                            {account?.planSource === "team" && " · team"}
+                        </span>
+                    )}
                 </div>
             </div>
 

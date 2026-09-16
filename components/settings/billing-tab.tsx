@@ -3,9 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AlertCircle, Check, Loader2 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { resolvePlan } from "@/lib/firebase/users";
+import { useAccount } from "@/hooks/useAccount";
 import { getPlan } from "@/lib/plans";
+import { PaymentFailedBanner } from "@/components/account/payment-failed-banner";
 
 /**
  * The Subscription & Billing panel in settings.
@@ -20,12 +20,15 @@ import { getPlan } from "@/lib/plans";
  * case they are in and that message is shown as-is rather than guessed at.
  */
 export function BillingTab() {
-    const { profile, loading } = useAuth();
+    // The server's answer, not the profile's: a Business plan held through a
+    // team is not on the member's own document.
+    const { account, loading } = useAccount();
     const [opening, setOpening] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const planId = resolvePlan(profile);
+    const planId = account?.plan ?? "free";
     const plan = getPlan(planId);
+    const fromTeam = account?.planSource === "team";
     const isFree = planId === "free";
 
     const openPortal = async () => {
@@ -66,6 +69,8 @@ export function BillingTab() {
                 Subscription &amp; Billing
             </h2>
 
+            <PaymentFailedBanner failedAt={account?.paymentFailedAt} showSettingsLink={false} />
+
             {/* Current plan */}
             <div className="p-5 rounded-xl border border-card mb-4">
                 <p className="text-sm text-muted">Current plan</p>
@@ -73,9 +78,15 @@ export function BillingTab() {
                 <div className="mt-1 flex items-baseline gap-2">
                     <p className="text-lg font-semibold text-fg">{plan.name}</p>
                     <p className="text-sm text-muted">
-                        {isFree ? "" : `${plan.monthly}/month`}
+                        {isFree || fromTeam ? "" : `${plan.monthly}/month`}
                     </p>
                 </div>
+
+                {fromTeam && (
+                    <p className="mt-1 text-xs text-muted">
+                        Provided by your team{account?.teamOwnerEmail ? ` (${account.teamOwnerEmail})` : ""}.
+                    </p>
+                )}
 
                 <ul className="mt-4 space-y-2.5">
                     {plan.features.map((feature) => (
@@ -97,7 +108,11 @@ export function BillingTab() {
                 </p>
             )}
 
-            {isFree ? (
+            {fromTeam ? (
+                <p className="text-sm text-muted">
+                    Your team owner manages this plan&apos;s billing.
+                </p>
+            ) : isFree ? (
                 <Link
                     href="/pricing"
                     className="inline-block px-5 py-2.5 rounded-full bg-[var(--primary)] text-white text-sm font-medium hover:bg-[var(--primary-hover)] transition-colors"
