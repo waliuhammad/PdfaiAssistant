@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Upload, X, FileText, ShieldCheck } from "lucide-react";
+import { CloudSources } from "./cloud-sources";
 
 /**
  * The one upload area every tool uses.
@@ -15,6 +16,9 @@ import { Upload, X, FileText, ShieldCheck } from "lucide-react";
  * The width is capped here rather than left to the page, because the tool
  * pages run from max-w-xl to max-w-7xl and the box came out a different size
  * on every one of them.
+ *
+ * Files arrive three ways — dropped, browsed, or imported from a cloud drive —
+ * and all three reach the tool through onFiles as a FileList.
  */
 export function UploadCard({
     onFiles,
@@ -86,6 +90,17 @@ export function UploadCard({
 
             <p className="text-[var(--primary)] font-semibold text-sm">{title}</p>
             <p className="text-muted text-xs mt-1">{hint}</p>
+
+            {/* Inside the box, so a tool gets cloud import by using the box and
+                nothing else. The picked files arrive through the same onFiles as
+                a file from disk, so no tool had to change. */}
+            <CloudSources
+                accept={accept}
+                multiple={multiple}
+                disabled={disabled}
+                onFiles={onFiles}
+                onPickLocal={open}
+            />
         </div>
     );
 }
